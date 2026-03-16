@@ -1,0 +1,101 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Focus Dashboard</title>
+  <link rel="stylesheet" href="css/styles.css" />
+</head>
+<body>
+
+<header>
+  <h1>Focus Dashboard</h1>
+  <span class="date-badge" id="dateBadge"></span>
+</header>
+
+<main>
+
+  <!-- ── LEFT: Pomodoro Timer ── -->
+  <section class="timer-panel">
+    <span class="timer-label">Pomodoro Timer</span>
+
+    <div class="timer-ring-wrap">
+      <svg class="timer-ring" width="220" height="220" viewBox="0 0 220 220">
+        <circle class="ring-bg"       cx="110" cy="110" r="96" />
+        <circle class="ring-progress" cx="110" cy="110" r="96"
+          id="ringProgress"
+          stroke-dasharray="603.19"
+          stroke-dashoffset="0" />
+      </svg>
+      <div class="timer-center">
+        <div class="timer-display" id="timerDisplay">30:00</div>
+        <div class="timer-phase"   id="timerPhase">Ready</div>
+      </div>
+    </div>
+
+    <div class="timer-config">
+      <div class="presets">
+        <button class="preset-btn" onclick="setPreset(15)">15m</button>
+        <button class="preset-btn" onclick="setPreset(25)">25m</button>
+        <button class="preset-btn" onclick="setPreset(30)">30m</button>
+        <button class="preset-btn" onclick="setPreset(45)">45m</button>
+        <button class="preset-btn" onclick="setPreset(60)">60m</button>
+      </div>
+      <div class="custom-duration-row">
+        <label for="customInput">Custom:</label>
+        <input class="custom-input" type="number" id="customInput"
+               min="1" max="180" value="30"
+               onchange="setCustomDuration(this.value)" />
+        <span>min</span>
+      </div>
+    </div>
+
+    <div class="timer-controls">
+      <button class="ctrl-btn secondary" onclick="resetTimer()" title="Reset">↺</button>
+      <button class="ctrl-btn primary"   onclick="toggleTimer()" id="playPauseBtn">▶</button>
+      <button class="ctrl-btn secondary" onclick="skipTimer()"   title="Skip">⏭</button>
+    </div>
+
+    <div class="session-dots" id="sessionDots"></div>
+
+    <div class="stats-bar">
+      <div class="stat">
+        <span class="stat-value" id="statSessions">0</span>
+        <span class="stat-label">Sessions</span>
+      </div>
+      <div class="stat">
+        <span class="stat-value" id="statFocused">0m</span>
+        <span class="stat-label">Focused</span>
+      </div>
+      <div class="stat">
+        <span class="stat-value" id="statDone">0</span>
+        <span class="stat-label">Tasks Done</span>
+      </div>
+    </div>
+  </section>
+
+  <!-- ── RIGHT: Time Blocks ── -->
+  <section class="blocks-panel">
+    <div class="panel-header">
+      <h2>Time Blocks</h2>
+      <span class="block-count" id="blockCount">3 blocks</span>
+    </div>
+
+    <div class="blocks-scroll">
+      <div id="blocksList"></div>
+      <div class="add-block-wrap">
+        <button class="add-block-btn" onclick="addBlock()">
+          <span class="add-icon">+</span>
+          Add Time Block
+        </button>
+      </div>
+    </div>
+  </section>
+
+</main>
+
+<div class="toast" id="toast"></div>
+
+<script src="js/app.js"></script>
+</body>
+</html>
