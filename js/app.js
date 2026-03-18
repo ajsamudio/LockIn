@@ -1,4 +1,40 @@
-// ── Config ──────────────────────────────────────────────────────────────────
+// ── Supabase Client ───────────────────────────────────────────────────────────
+const { createClient } = supabase;
+const db = createClient(SUPABASE_URL, SUPABASE_ANON);
+
+let currentUser = null;
+
+// ── Auth ──────────────────────────────────────────────────────────────────────
+async function signInWithGoogle() {
+  const { error } = await db.auth.signInWithOAuth({
+    provider: 'google',
+    options: { redirectTo: window.location.href },
+  });
+  if (error) showToast('Sign in failed: ' + error.message);
+}
+
+async function signOut() {
+  await db.auth.signOut();
+}
+
+db.auth.onAuthStateChange(async (event, session) => {
+  if (session?.user) {
+    currentUser = session.user;
+    document.getElementById('loginOverlay').style.display = 'none';
+    document.getElementById('userEmail').textContent = currentUser.email;
+    document.getElementById('userInfo').style.display = 'flex';
+    await renderDay(todayStr());
+    buildSessionDots();
+    updateDisplay();
+    setActivePreset(30);
+  } else {
+    currentUser = null;
+    document.getElementById('loginOverlay').style.display = 'flex';
+    document.getElementById('userInfo').style.display = 'none';
+  }
+});
+
+// ── Config ────────────────────────────────────────────────────────────────────
 const ACCENT_COLORS = [
   'var(--pantone-blue)',
   'var(--pantone-teal)',
@@ -11,7 +47,7 @@ const SESSIONS_PER_ROUND = 4;
 const CIRCUMFERENCE    = 2 * Math.PI * 96;
 const EARLIEST_DATE    = '2026-03-15';
 
-// ── State ───────────────────────────────────────────────────────────────────
+// ── State ─────────────────────────────────────────────────────────────────────
 let blockCounter   = 0;
 let tasksDone      = 0;
 let totalSeconds   = 30 * 60;
@@ -26,7 +62,7 @@ let viewDate       = todayStr();
 let isPastDay      = false;
 let loadingDay     = false;
 
-// ── Date Helpers ─────────────────────────────────────────────────────────────
+// ── Date Helpers ──────────────────────────────────────────────────────────────
 function todayStr() {
   const d = new Date();
   return d.getFullYear() + '-' +
@@ -50,7 +86,7 @@ function formatBadge(dateStr) {
   });
 }
 
-// ── Persistence ───────────────────────────────────────────────────────────────
+// ── Persistence (Supabase) ────────────────────────────────────────────────────
 function getBlocksData() {
   return [...document.getElementById('blocksList').querySelectorAll('.time-block')].map(b => ({
     name:      b.querySelector('.block-name').value,
@@ -59,19 +95,43 @@ function getBlocksData() {
   }));
 }
 
-function saveDay() {
-  if (loadingDay || isPastDay) return;
-  localStorage.setItem('dashboard_' + viewDate, JSON.stringify({
-    blocks: getBlocksData(),
-    sessions,
-    focusedMinutes,
-    tasksDone,
-  }));
+async function saveDay() {
+  if (loadingDay || isPastDay || !currentUser) return;
+  try {
+    await db.from('day_data').upsert({
+      user_id:         currentUser.id,
+      date:            viewDate,
+      blocks:          getBlocksData(),
+      sessions,
+      focused_minutes: focusedMinutes,
+      tasks_done:      tasksDone,
+      updated_at:      new Date().toISOString(),
+    }, { onConflict: 'user_id,date' });
+  } catch (e) {
+    console.error('saveDay error:', e);
+  }
 }
 
-function loadDayData(dateStr) {
-  const raw = localStorage.getItem('dashboard_' + dateStr);
-  if (raw) return JSON.parse(raw);
+async function loadDayData(dateStr) {
+  if (!currentUser) return null;
+  try {
+    const { data } = await db
+      .from('day_data')
+      .select('*')
+      .eq('user_id', currentUser.id)
+      .eq('date', dateStr)
+      .maybeSingle();
+    if (data) {
+      return {
+        blocks:         data.blocks          || [],
+        sessions:       data.sessions        || 0,
+        focusedMinutes: data.focused_minutes || 0,
+        tasksDone:      data.tasks_done      || 0,
+      };
+    }
+  } catch (e) {
+    console.error('loadDayData error:', e);
+  }
   if (dateStr === todayStr()) {
     return {
       blocks: [
@@ -85,8 +145,8 @@ function loadDayData(dateStr) {
   return null;
 }
 
-// ── Render Day ───────────────────────────────────────────────────────────────
-function renderDay(dateStr) {
+// ── Render Day ────────────────────────────────────────────────────────────────
+async function renderDay(dateStr) {
   if (running) pauseTimer();
 
   viewDate  = dateStr;
@@ -99,7 +159,7 @@ function renderDay(dateStr) {
   list.innerHTML = '';
   blockCounter = 0;
 
-  const data = loadDayData(dateStr);
+  const data = await loadDayData(dateStr);
 
   if (data) {
     sessions       = data.sessions       || 0;
@@ -156,31 +216,24 @@ function updateNavButtons() {
 }
 
 // ── Day Navigation ────────────────────────────────────────────────────────────
-function navigateDay(delta) {
+async function navigateDay(delta) {
   const next = addDays(viewDate, delta);
   if (next < EARLIEST_DATE || next > addDays(todayStr(), 1)) return;
   if (running) pauseTimer();
   if (!isPastDay) saveDay();
-  renderDay(next);
+  await renderDay(next);
 }
 
 function goToToday() {
   renderDay(todayStr());
 }
 
-// ── Init ─────────────────────────────────────────────────────────────────────
-renderDay(todayStr());
-buildSessionDots();
-updateDisplay();
-setActivePreset(30);
-
-// ── Time Blocks ──────────────────────────────────────────────────────────────
+// ── Time Blocks ───────────────────────────────────────────────────────────────
 function addBlock(name = '', duration = '30', completed = false) {
   const list  = document.getElementById('blocksList');
   const id    = blockCounter++;
   const color = ACCENT_COLORS[id % ACCENT_COLORS.length];
 
-  // FLIP: snapshot existing block positions before DOM change
   const existing  = [...list.querySelectorAll('.time-block')];
   const snapshots = existing.map(b => b.getBoundingClientRect().top);
 
@@ -209,14 +262,12 @@ function addBlock(name = '', duration = '30', completed = false) {
 
   list.appendChild(block);
 
-  // Auto-save on text/number input changes
   block.querySelector('.block-name').addEventListener('input', saveDay);
   block.querySelector('.block-duration').addEventListener('input', saveDay);
 
   if (!loadingDay) {
     updateBlockCount();
 
-    // FLIP: animate existing blocks to new positions
     requestAnimationFrame(() => {
       existing.forEach((b, i) => {
         const dy = snapshots[i] - b.getBoundingClientRect().top;
@@ -233,7 +284,6 @@ function addBlock(name = '', duration = '30', completed = false) {
         });
       });
 
-      // Fade + slide in the new block
       block.classList.add('block-entering');
       block.addEventListener('animationend', () => block.classList.remove('block-entering'), { once: true });
     });
@@ -271,7 +321,7 @@ function updateBlockCount() {
   document.getElementById('blockCount').textContent = n + (n === 1 ? ' block' : ' blocks');
 }
 
-// ── Timer ────────────────────────────────────────────────────────────────────
+// ── Timer ─────────────────────────────────────────────────────────────────────
 function updateDisplay() {
   const m = Math.floor(remaining / 60);
   const s = remaining % 60;
@@ -372,7 +422,7 @@ function setActivePreset(target) {
   });
 }
 
-// ── Session Dots ─────────────────────────────────────────────────────────────
+// ── Session Dots ──────────────────────────────────────────────────────────────
 function buildSessionDots() {
   const wrap = document.getElementById('sessionDots');
   wrap.innerHTML = '';
