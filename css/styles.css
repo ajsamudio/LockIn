@@ -528,6 +528,108 @@ main {
 
 .toast.show { transform: translateY(0); opacity: 1; }
 
+/* ── Panel Header Right ── */
+.panel-header-right {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+/* ── Past Day Badge ── */
+.past-badge {
+  font-size: 0.65rem;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  color: var(--pantone-amber);
+  background: rgba(246, 163, 31, 0.1);
+  padding: 3px 9px;
+  border-radius: 20px;
+  border: 1px solid rgba(246, 163, 31, 0.25);
+}
+
+/* ── Past Day Read-Only State ── */
+main.past-day .block-delete { display: none; }
+
+main.past-day .ctrl-btn,
+main.past-day .preset-btn,
+main.past-day .custom-input {
+  opacity: 0.35;
+  cursor: not-allowed;
+  pointer-events: none;
+}
+
+main.past-day .block-name,
+main.past-day .block-duration,
+main.past-day .block-checkbox {
+  opacity: 0.6;
+  cursor: default;
+}
+
+/* ── Empty Day State ── */
+.empty-day {
+  text-align: center;
+  color: var(--muted);
+  font-size: 0.82rem;
+  padding: 40px 0 24px;
+  line-height: 1.6;
+}
+
+/* ── Day Navigation ── */
+.day-nav {
+  position: fixed;
+  bottom: 24px;
+  left: 24px;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  z-index: 50;
+}
+
+.day-nav-btn {
+  background: var(--surface2);
+  border: 1px solid var(--border);
+  border-radius: 50%;
+  color: var(--muted);
+  cursor: pointer;
+  width: 36px;
+  height: 36px;
+  font-size: 1rem;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: all 0.2s;
+  line-height: 1;
+}
+
+.day-nav-btn:hover:not(:disabled) {
+  border-color: var(--pantone-blue);
+  color: var(--pantone-blue);
+  background: rgba(43, 101, 217, 0.08);
+}
+
+.day-nav-btn:disabled {
+  opacity: 0.25;
+  cursor: not-allowed;
+}
+
+.day-nav-today {
+  background: var(--pantone-blue);
+  border: none;
+  border-radius: 20px;
+  color: #fff;
+  cursor: pointer;
+  font-size: 0.75rem;
+  font-weight: 500;
+  padding: 6px 14px;
+  transition: background 0.2s, transform 0.15s;
+}
+
+.day-nav-today:hover {
+  background: #3a74e8;
+  transform: scale(1.03);
+}
+
 /* ── Mobile ── */
 @media (max-width: 700px) {
   body {

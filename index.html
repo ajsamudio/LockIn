@@ -78,7 +78,10 @@
   <section class="blocks-panel">
     <div class="panel-header">
       <h2>Time Blocks</h2>
-      <span class="block-count" id="blockCount">3 blocks</span>
+      <div class="panel-header-right">
+        <span class="past-badge" id="pastBadge" style="display:none">Past Day</span>
+        <span class="block-count" id="blockCount">3 blocks</span>
+      </div>
     </div>
 
     <div class="blocks-scroll">
@@ -95,6 +98,13 @@
 </main>
 
 <div class="toast" id="toast"></div>
+
+<!-- ── Day Navigation ── -->
+<div class="day-nav" id="dayNav">
+  <button class="day-nav-btn" id="navPrev" onclick="navigateDay(-1)" title="Previous day">←</button>
+  <button class="day-nav-today" id="navToday" onclick="goToToday()" style="display:none">Today</button>
+  <button class="day-nav-btn" id="navNext" onclick="navigateDay(1)" title="Next day">→</button>
+</div>
 
 <script src="js/app.js"></script>
 </body>

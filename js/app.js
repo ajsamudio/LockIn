@@ -8,7 +8,8 @@ const ACCENT_COLORS = [
 ];
 
 const SESSIONS_PER_ROUND = 4;
-const CIRCUMFERENCE = 2 * Math.PI * 96; // SVG ring r=96 → 603.19
+const CIRCUMFERENCE    = 2 * Math.PI * 96;
+const EARLIEST_DATE    = '2026-03-15';
 
 // ── State ───────────────────────────────────────────────────────────────────
 let blockCounter   = 0;
@@ -21,16 +22,154 @@ let sessions       = 0;
 let focusedMinutes = 0;
 let sessionStart   = null;
 let toastTimeout   = null;
+let viewDate       = todayStr();
+let isPastDay      = false;
+let loadingDay     = false;
+
+// ── Date Helpers ─────────────────────────────────────────────────────────────
+function todayStr() {
+  const d = new Date();
+  return d.getFullYear() + '-' +
+    String(d.getMonth() + 1).padStart(2, '0') + '-' +
+    String(d.getDate()).padStart(2, '0');
+}
+
+function addDays(dateStr, delta) {
+  const [y, m, d] = dateStr.split('-').map(Number);
+  const date = new Date(y, m - 1, d);
+  date.setDate(date.getDate() + delta);
+  return date.getFullYear() + '-' +
+    String(date.getMonth() + 1).padStart(2, '0') + '-' +
+    String(date.getDate()).padStart(2, '0');
+}
+
+function formatBadge(dateStr) {
+  const [y, m, d] = dateStr.split('-').map(Number);
+  return new Date(y, m - 1, d).toLocaleDateString('en-US', {
+    weekday: 'short', month: 'short', day: 'numeric',
+  });
+}
+
+// ── Persistence ───────────────────────────────────────────────────────────────
+function getBlocksData() {
+  return [...document.getElementById('blocksList').querySelectorAll('.time-block')].map(b => ({
+    name:      b.querySelector('.block-name').value,
+    duration:  b.querySelector('.block-duration').value,
+    completed: b.classList.contains('completed'),
+  }));
+}
+
+function saveDay() {
+  if (loadingDay || isPastDay) return;
+  localStorage.setItem('dashboard_' + viewDate, JSON.stringify({
+    blocks: getBlocksData(),
+    sessions,
+    focusedMinutes,
+    tasksDone,
+  }));
+}
+
+function loadDayData(dateStr) {
+  const raw = localStorage.getItem('dashboard_' + dateStr);
+  if (raw) return JSON.parse(raw);
+  if (dateStr === todayStr()) {
+    return {
+      blocks: [
+        { name: 'Morning Planning', duration: '30', completed: false },
+        { name: 'Deep Work',        duration: '90', completed: false },
+        { name: 'Review & Wrap-up', duration: '30', completed: false },
+      ],
+      sessions: 0, focusedMinutes: 0, tasksDone: 0,
+    };
+  }
+  return null;
+}
+
+// ── Render Day ───────────────────────────────────────────────────────────────
+function renderDay(dateStr) {
+  if (running) pauseTimer();
+
+  viewDate  = dateStr;
+  isPastDay = dateStr < todayStr();
+
+  document.getElementById('dateBadge').textContent = formatBadge(dateStr);
+
+  loadingDay = true;
+  const list = document.getElementById('blocksList');
+  list.innerHTML = '';
+  blockCounter = 0;
+
+  const data = loadDayData(dateStr);
+
+  if (data) {
+    sessions       = data.sessions       || 0;
+    focusedMinutes = data.focusedMinutes || 0;
+    tasksDone      = data.tasksDone      || 0;
+    data.blocks.forEach(b => addBlock(b.name, b.duration, b.completed));
+  } else {
+    sessions = 0; focusedMinutes = 0; tasksDone = 0;
+    list.innerHTML = '<p class="empty-day">No data recorded for this day.</p>';
+  }
+
+  document.getElementById('statSessions').textContent = sessions;
+  document.getElementById('statFocused').textContent  = focusedMinutes + 'm';
+  document.getElementById('statDone').textContent     = tasksDone;
+
+  loadingDay = false;
+
+  remaining = totalSeconds;
+  updateDisplay();
+  document.getElementById('timerPhase').textContent = 'Ready';
+  buildSessionDots();
+  updateBlockCount();
+  applyReadOnly();
+  updateNavButtons();
+}
+
+function applyReadOnly() {
+  document.querySelector('main').classList.toggle('past-day', isPastDay);
+
+  document.querySelectorAll('.block-name, .block-duration').forEach(el => {
+    el.disabled = isPastDay;
+  });
+  document.querySelectorAll('.block-checkbox').forEach(el => {
+    el.disabled = isPastDay;
+  });
+
+  const addWrap = document.querySelector('.add-block-wrap');
+  if (addWrap) addWrap.style.display = isPastDay ? 'none' : '';
+
+  document.querySelectorAll('.ctrl-btn, .preset-btn, .custom-input').forEach(el => {
+    el.disabled = isPastDay;
+  });
+
+  const pastBadge = document.getElementById('pastBadge');
+  if (pastBadge) pastBadge.style.display = isPastDay ? 'inline-block' : 'none';
+}
+
+function updateNavButtons() {
+  const today    = todayStr();
+  const tomorrow = addDays(today, 1);
+  document.getElementById('navPrev').disabled  = viewDate <= EARLIEST_DATE;
+  document.getElementById('navNext').disabled  = viewDate >= tomorrow;
+  document.getElementById('navToday').style.display = viewDate !== today ? '' : 'none';
+}
+
+// ── Day Navigation ────────────────────────────────────────────────────────────
+function navigateDay(delta) {
+  const next = addDays(viewDate, delta);
+  if (next < EARLIEST_DATE || next > addDays(todayStr(), 1)) return;
+  if (running) pauseTimer();
+  if (!isPastDay) saveDay();
+  renderDay(next);
+}
+
+function goToToday() {
+  renderDay(todayStr());
+}
 
 // ── Init ─────────────────────────────────────────────────────────────────────
-document.getElementById('dateBadge').textContent = new Date().toLocaleDateString('en-US', {
-  weekday: 'short', month: 'short', day: 'numeric',
-});
-
-addBlock('Morning Planning', '30');
-addBlock('Deep Work', '90');
-addBlock('Review & Wrap-up', '30');
-
+renderDay(todayStr());
 buildSessionDots();
 updateDisplay();
 setActivePreset(30);
@@ -69,31 +208,39 @@ function addBlock(name = '', duration = '30', completed = false) {
     </div>`;
 
   list.appendChild(block);
-  updateBlockCount();
 
-  // After layout recalculates, FLIP existing blocks to their old positions then animate forward
-  requestAnimationFrame(() => {
-    existing.forEach((b, i) => {
-      const dy = snapshots[i] - b.getBoundingClientRect().top;
-      if (Math.abs(dy) < 0.5) return;
-      b.style.transition = 'none';
-      b.style.transform  = `translateY(${dy}px)`;
-      requestAnimationFrame(() => {
-        b.style.transition = 'transform 0.38s cubic-bezier(0.25, 0.46, 0.45, 0.94)';
-        b.style.transform  = '';
-        b.addEventListener('transitionend', () => {
-          b.style.transition = '';
+  // Auto-save on text/number input changes
+  block.querySelector('.block-name').addEventListener('input', saveDay);
+  block.querySelector('.block-duration').addEventListener('input', saveDay);
+
+  if (!loadingDay) {
+    updateBlockCount();
+
+    // FLIP: animate existing blocks to new positions
+    requestAnimationFrame(() => {
+      existing.forEach((b, i) => {
+        const dy = snapshots[i] - b.getBoundingClientRect().top;
+        if (Math.abs(dy) < 0.5) return;
+        b.style.transition = 'none';
+        b.style.transform  = `translateY(${dy}px)`;
+        requestAnimationFrame(() => {
+          b.style.transition = 'transform 0.38s cubic-bezier(0.25, 0.46, 0.45, 0.94)';
           b.style.transform  = '';
-        }, { once: true });
+          b.addEventListener('transitionend', () => {
+            b.style.transition = '';
+            b.style.transform  = '';
+          }, { once: true });
+        });
       });
+
+      // Fade + slide in the new block
+      block.classList.add('block-entering');
+      block.addEventListener('animationend', () => block.classList.remove('block-entering'), { once: true });
     });
 
-    // Fade + slide in the new block
-    block.classList.add('block-entering');
-    block.addEventListener('animationend', () => block.classList.remove('block-entering'), { once: true });
-  });
-
-  block.querySelector('.block-name').focus();
+    block.querySelector('.block-name').focus();
+    saveDay();
+  }
 }
 
 function toggleBlock(checkbox) {
@@ -110,15 +257,17 @@ function toggleBlock(checkbox) {
     tasksDone = Math.max(0, tasksDone - 1);
     document.getElementById('statDone').textContent = tasksDone;
   }
+  saveDay();
 }
 
 function deleteBlock(btn) {
   btn.closest('.time-block').remove();
   updateBlockCount();
+  saveDay();
 }
 
 function updateBlockCount() {
-  const n = document.getElementById('blocksList').children.length;
+  const n = document.getElementById('blocksList').querySelectorAll('.time-block').length;
   document.getElementById('blockCount').textContent = n + (n === 1 ? ' block' : ' blocks');
 }
 
@@ -164,6 +313,7 @@ function pauseTimer() {
     document.getElementById('statFocused').textContent = focusedMinutes + 'm';
     sessionStart = null;
   }
+  saveDay();
 }
 
 function resetTimer() {
@@ -192,6 +342,7 @@ function completeSession() {
   document.getElementById('timerPhase').textContent = 'Session done!';
   buildSessionDots();
   showToast('Session complete! Take a break.');
+  saveDay();
 }
 
 function setPreset(mins) {
