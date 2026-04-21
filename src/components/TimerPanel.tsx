@@ -20,7 +20,7 @@ export function TimerPanel({ timer, isPastDay }: Props) {
     remaining, running, phase, sessions, focusedMinutes,
     progress, ringOffset, dotsFilled,
     totalSeconds, SESSIONS_PER_ROUND,
-    start, pause, reset, skip, setDuration,
+    start, pause, setDuration,
   } = timer
 
   const mins = Math.floor(remaining / 60)
