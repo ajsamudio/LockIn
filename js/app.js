@@ -1,39 +1,3 @@
-// ── Supabase Client ───────────────────────────────────────────────────────────
-const { createClient } = supabase;
-const db = createClient(SUPABASE_URL, SUPABASE_ANON);
-
-let currentUser = null;
-
-// ── Auth ──────────────────────────────────────────────────────────────────────
-async function signInWithGoogle() {
-  const { error } = await db.auth.signInWithOAuth({
-    provider: 'google',
-    options: { redirectTo: window.location.href },
-  });
-  if (error) showToast('Sign in failed: ' + error.message);
-}
-
-async function signOut() {
-  await db.auth.signOut();
-}
-
-db.auth.onAuthStateChange(async (event, session) => {
-  if (session?.user) {
-    currentUser = session.user;
-    document.getElementById('loginOverlay').style.display = 'none';
-    document.getElementById('userEmail').textContent = currentUser.email;
-    document.getElementById('userInfo').style.display = 'flex';
-    await renderDay(todayStr());
-    buildSessionDots();
-    updateDisplay();
-    setActivePreset(30);
-  } else {
-    currentUser = null;
-    document.getElementById('loginOverlay').style.display = 'flex';
-    document.getElementById('userInfo').style.display = 'none';
-  }
-});
-
 // ── Config ────────────────────────────────────────────────────────────────────
 const ACCENT_COLORS = [
   'var(--pantone-blue)',
@@ -86,7 +50,7 @@ function formatBadge(dateStr) {
   });
 }
 
-// ── Persistence (Supabase) ────────────────────────────────────────────────────
+// ── Persistence (localStorage) ────────────────────────────────────────────────
 function getBlocksData() {
   return [...document.getElementById('blocksList').querySelectorAll('.time-block')].map(b => ({
     name:      b.querySelector('.block-name').value,
@@ -95,42 +59,20 @@ function getBlocksData() {
   }));
 }
 
-async function saveDay() {
-  if (loadingDay || isPastDay || !currentUser) return;
-  try {
-    await db.from('day_data').upsert({
-      user_id:         currentUser.id,
-      date:            viewDate,
-      blocks:          getBlocksData(),
-      sessions,
-      focused_minutes: focusedMinutes,
-      tasks_done:      tasksDone,
-      updated_at:      new Date().toISOString(),
-    }, { onConflict: 'user_id,date' });
-  } catch (e) {
-    console.error('saveDay error:', e);
-  }
+function saveDay() {
+  if (loadingDay || isPastDay) return;
+  localStorage.setItem('lockin_' + viewDate, JSON.stringify({
+    blocks: getBlocksData(),
+    sessions,
+    focusedMinutes,
+    tasksDone,
+  }));
 }
 
-async function loadDayData(dateStr) {
-  if (!currentUser) return null;
-  try {
-    const { data } = await db
-      .from('day_data')
-      .select('*')
-      .eq('user_id', currentUser.id)
-      .eq('date', dateStr)
-      .maybeSingle();
-    if (data) {
-      return {
-        blocks:         data.blocks          || [],
-        sessions:       data.sessions        || 0,
-        focusedMinutes: data.focused_minutes || 0,
-        tasksDone:      data.tasks_done      || 0,
-      };
-    }
-  } catch (e) {
-    console.error('loadDayData error:', e);
+function loadDayData(dateStr) {
+  const raw = localStorage.getItem('lockin_' + dateStr);
+  if (raw) {
+    try { return JSON.parse(raw); } catch (e) {}
   }
   if (dateStr === todayStr()) {
     return {
@@ -146,7 +88,7 @@ async function loadDayData(dateStr) {
 }
 
 // ── Render Day ────────────────────────────────────────────────────────────────
-async function renderDay(dateStr) {
+function renderDay(dateStr) {
   if (running) pauseTimer();
 
   viewDate  = dateStr;
@@ -159,7 +101,7 @@ async function renderDay(dateStr) {
   list.innerHTML = '';
   blockCounter = 0;
 
-  const data = await loadDayData(dateStr);
+  const data = loadDayData(dateStr);
 
   if (data) {
     sessions       = data.sessions       || 0;
@@ -216,12 +158,12 @@ function updateNavButtons() {
 }
 
 // ── Day Navigation ────────────────────────────────────────────────────────────
-async function navigateDay(delta) {
+function navigateDay(delta) {
   const next = addDays(viewDate, delta);
   if (next < EARLIEST_DATE || next > addDays(todayStr(), 1)) return;
   if (running) pauseTimer();
   if (!isPastDay) saveDay();
-  await renderDay(next);
+  renderDay(next);
 }
 
 function goToToday() {
@@ -443,3 +385,7 @@ function showToast(msg) {
   clearTimeout(toastTimeout);
   toastTimeout = setTimeout(() => t.classList.remove('show'), 3000);
 }
+
+// ── Init ──────────────────────────────────────────────────────────────────────
+renderDay(todayStr());
+setActivePreset(30);
