@@ -1,7 +1,7 @@
 import { useTimer } from '../hooks/useTimer'
 
-const PRESETS = [15, 25, 30, 45, 60]
-const R = 96
+const PRESETS = [5, 30, 60]
+const R = 80
 const CIRC = 2 * Math.PI * R
 
 interface Props {
@@ -40,11 +40,11 @@ export function TimerPanel({ timer, isPastDay }: Props) {
 
       {/* Ring */}
       <div className="ring-wrap">
-        <svg className="timer-svg" width="220" height="220" viewBox="0 0 220 220">
-          <circle className="ring-bg-circle" cx="110" cy="110" r={R} />
+        <svg className="timer-svg" width="190" height="190" viewBox="0 0 190 190">
+          <circle className="ring-bg-circle" cx="95" cy="95" r={R} />
           <circle
             className="ring-progress-circle"
-            cx="110" cy="110" r={R}
+            cx="95" cy="95" r={R}
             strokeDasharray={CIRC}
             strokeDashoffset={ringOffset}
             stroke={ringColor(progress)}
@@ -81,24 +81,9 @@ export function TimerPanel({ timer, isPastDay }: Props) {
         ))}
       </div>
 
-      {/* Custom duration */}
-      <div className="custom-row">
-        <label htmlFor="custom-dur">Custom:</label>
-        <input
-          id="custom-dur"
-          className="custom-input"
-          type="number"
-          min={1}
-          max={180}
-          value={Math.floor(totalSeconds / 60)}
-          onChange={e => setDuration(Math.max(1, Math.min(180, parseInt(e.target.value) || 1)))}
-        />
-        <span>min</span>
-      </div>
 
       {/* Controls */}
       <div className="ctrl-row">
-        <button className="ctrl-btn secondary" onClick={reset} title="Reset">↺</button>
         <button
           className={`ctrl-btn primary${running ? ' running' : ''}`}
           onClick={running ? pause : start}
@@ -106,7 +91,6 @@ export function TimerPanel({ timer, isPastDay }: Props) {
         >
           {running ? '⏸' : '▶'}
         </button>
-        <button className="ctrl-btn secondary" onClick={skip} title="Skip session">⏭</button>
       </div>
 
       {/* Stats */}

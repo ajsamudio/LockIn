@@ -1,7 +1,7 @@
 import { useState, useEffect, useRef, useCallback } from 'react'
 import type { TimerPhase } from '../types'
 
-const CIRCUMFERENCE = 2 * Math.PI * 96
+const CIRCUMFERENCE = 2 * Math.PI * 80
 const SESSIONS_PER_ROUND = 4
 
 export function useTimer(onSessionComplete: (totalSessions: number) => void) {
