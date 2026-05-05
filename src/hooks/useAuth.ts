@@ -7,6 +7,8 @@ export function useAuth() {
   const [loading, setLoading] = useState(true)
 
   useEffect(() => {
+    if (!supabase) { setLoading(false); return }
+
     // Hydrate from existing session (handles OAuth redirect return)
     supabase.auth.getSession().then(({ data: { session } }) => {
       setUser(session?.user ?? null)
@@ -21,16 +23,18 @@ export function useAuth() {
     return () => subscription.unsubscribe()
   }, [])
 
-  const signInWithGoogle = () =>
+  const signInWithGoogle = () => {
+    if (!supabase) return
     supabase.auth.signInWithOAuth({
       provider: 'google',
-      options: {
-        // Redirect back to exactly where the user was
-        redirectTo: window.location.href,
-      },
+      options: { redirectTo: window.location.href },
     })
+  }
 
-  const signOut = () => supabase.auth.signOut()
+  const signOut = () => {
+    if (!supabase) return
+    supabase.auth.signOut()
+  }
 
   return { user, loading, signInWithGoogle, signOut }
 }

@@ -13,9 +13,11 @@ function rowToDay(row: Record<string, unknown>): DayData {
 }
 
 // ---------- public API ----------
+// All functions are no-ops when Supabase is not configured.
 
 /** Fetch a single day for the logged-in user. Returns null if not found. */
 export async function cloudFetchDay(userId: string, date: string): Promise<DayData | null> {
+  if (!supabase) return null
   const { data, error } = await supabase
     .from('day_data')
     .select('blocks, sessions, focused_minutes, tasks_done')
@@ -29,6 +31,7 @@ export async function cloudFetchDay(userId: string, date: string): Promise<DayDa
 
 /** Upsert (create or overwrite) a day for the logged-in user. */
 export async function cloudUpsertDay(userId: string, date: string, data: DayData): Promise<void> {
+  if (!supabase) return
   await supabase
     .from('day_data')
     .upsert(
@@ -46,6 +49,7 @@ export async function cloudUpsertDay(userId: string, date: string, data: DayData
 
 /** Fetch every day ever saved for this user. Returns a date→DayData map. */
 export async function cloudFetchAll(userId: string): Promise<Record<string, DayData>> {
+  if (!supabase) return {}
   const { data, error } = await supabase
     .from('day_data')
     .select('date, blocks, sessions, focused_minutes, tasks_done')

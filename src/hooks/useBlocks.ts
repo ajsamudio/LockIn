@@ -38,9 +38,15 @@ export function useBlocks(dateStr: string, isPastDay: boolean) {
     setIsLoaded(true)
   }, [dateStr])
 
-  const addBlock = useCallback(() => {
+  const addBlock = useCallback((initial?: { name?: string; duration?: number }) => {
     if (isPastDay) return
-    setBlocks(prev => [...prev, { id: uid(), name: '', duration: 30, completed: false, counted: false }])
+    setBlocks(prev => [...prev, {
+      id: uid(),
+      name: initial?.name ?? '',
+      duration: initial?.duration ?? 30,
+      completed: false,
+      counted: false,
+    }])
   }, [isPastDay])
 
   const updateBlock = useCallback((id: string, patch: Partial<TimeBlock>) => {

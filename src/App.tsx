@@ -159,6 +159,25 @@ function App() {
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [viewDate])
 
+  // ── Braindump ───────────────────────────────────────────────────────────
+  const [braindumpOpen, setBraindumpOpen] = useState(false)
+
+  const handleBraindump = useCallback((items: Array<{ name: string; duration: number }>) => {
+    items.forEach(({ name, duration }) => addBlock({ name, duration }))
+    showToast(`${items.length} block${items.length !== 1 ? 's' : ''} added!`, '⚡')
+  }, [addBlock, showToast])
+
+  useEffect(() => {
+    const onKeyDown = (e: KeyboardEvent) => {
+      if ((e.ctrlKey || e.metaKey) && e.key === 'b' && !isPastDay) {
+        e.preventDefault()
+        setBraindumpOpen(true)
+      }
+    }
+    document.addEventListener('keydown', onKeyDown)
+    return () => document.removeEventListener('keydown', onKeyDown)
+  }, [isPastDay])
+
   // ── UI ──────────────────────────────────────────────────────────────────
   const handleToggleBlock = (id: string) => {
     toggleBlock(id)
@@ -221,6 +240,10 @@ function App() {
           onUpdate={updateBlock}
           onDelete={deleteBlock}
           onToggle={handleToggleBlock}
+          braindumpOpen={braindumpOpen}
+          onOpenBraindump={() => setBraindumpOpen(true)}
+          onCloseBraindump={() => setBraindumpOpen(false)}
+          onBraindump={handleBraindump}
         />
       </main>
 

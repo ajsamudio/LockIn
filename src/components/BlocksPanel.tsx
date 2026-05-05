@@ -1,6 +1,7 @@
 import { useRef } from 'react'
 import type { TimeBlock } from '../types'
 import { TimeBlock as TimeBlockCard } from './TimeBlock'
+import BraindumpModal from './BraindumpModal'
 
 interface Props {
   blocks: TimeBlock[]
@@ -10,14 +11,21 @@ interface Props {
   onUpdate: (id: string, patch: Partial<TimeBlock>) => void
   onDelete: (id: string) => void
   onToggle: (id: string) => void
+  braindumpOpen: boolean
+  onOpenBraindump: () => void
+  onCloseBraindump: () => void
+  onBraindump: (items: Array<{ name: string; duration: number }>) => void
 }
 
-export function BlocksPanel({ blocks, tasksDone, isPastDay, onAdd, onUpdate, onDelete, onToggle }: Props) {
+export function BlocksPanel({
+  blocks, tasksDone, isPastDay,
+  onAdd, onUpdate, onDelete, onToggle,
+  braindumpOpen, onOpenBraindump, onCloseBraindump, onBraindump,
+}: Props) {
   const lastAddedIdRef = useRef<string | null>(null)
 
   const handleAdd = () => {
     onAdd()
-    // mark next render's new block — resolved in TimeBlock via isNew prop
     lastAddedIdRef.current = 'next'
   }
 
@@ -56,12 +64,23 @@ export function BlocksPanel({ blocks, tasksDone, isPastDay, onAdd, onUpdate, onD
         ))}
 
         {!isPastDay && (
-          <button className="add-btn" onClick={handleAdd}>
-            <span style={{ fontSize: '1rem' }}>+</span>
-            Add time block
-          </button>
+          <>
+            <button className="braindump-btn" onClick={onOpenBraindump}>
+              ⚡ Braindump
+            </button>
+            <button className="add-btn" onClick={handleAdd}>
+              <span style={{ fontSize: '1rem' }}>+</span>
+              Add time block
+            </button>
+          </>
         )}
       </div>
+
+      <BraindumpModal
+        isOpen={braindumpOpen}
+        onClose={onCloseBraindump}
+        onConfirm={onBraindump}
+      />
     </section>
   )
 }

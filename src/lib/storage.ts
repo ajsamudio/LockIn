@@ -56,3 +56,13 @@ export function getStreak(): number {
   }
   return streak
 }
+
+export function parseBraindumpLine(raw: string): { name: string; duration: number } | null {
+  const line = raw.trim()
+  if (!line) return null
+  const prefix = line.match(/^\[(\d+)\]\s*(.+)/)
+  if (prefix) return { name: prefix[2].trim(), duration: Math.min(480, Math.max(1, parseInt(prefix[1]))) }
+  const suffix = line.match(/^(.+?)\s*\((\d+)m\)\s*$/)
+  if (suffix) return { name: suffix[1].trim(), duration: Math.min(480, Math.max(1, parseInt(suffix[2]))) }
+  return { name: line, duration: 25 }
+}
