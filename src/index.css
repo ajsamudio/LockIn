@@ -951,3 +951,48 @@ body, #root {
 
   .toast { bottom: 16px; right: 16px; left: 16px; }
 }
+
+/* ── Auth button ── */
+.auth-btn {
+  display: flex;
+  align-items: center;
+  gap: 5px;
+  background: none;
+  border: none;
+  cursor: pointer;
+  padding: 3px 6px;
+  border-radius: 20px;
+  transition: background 0.18s, opacity 0.18s;
+  color: var(--text-secondary);
+  font-size: 0.78rem;
+  font-family: inherit;
+}
+.auth-btn:hover { background: var(--bg-alt); opacity: 0.85; }
+
+.auth-btn--signin {
+  border: 1px solid var(--border);
+  color: var(--text);
+  padding: 4px 10px;
+}
+
+.user-avatar {
+  width: 26px;
+  height: 26px;
+  border-radius: 50%;
+  object-fit: cover;
+  border: 1.5px solid var(--border);
+}
+
+.user-initial {
+  width: 26px;
+  height: 26px;
+  border-radius: 50%;
+  background: var(--accent-light);
+  color: var(--accent);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 0.75rem;
+  font-weight: 600;
+  border: 1.5px solid var(--border);
+}

@@ -1,5 +1,5 @@
 import { useState, useCallback, useRef, useEffect } from 'react'
-import type { TimeBlock } from '../types'
+import type { TimeBlock, DayData } from '../types'
 import { loadDayData } from '../lib/storage'
 
 let _counter = 0
@@ -73,5 +73,11 @@ export function useBlocks(dateStr: string, isPastDay: boolean) {
     }))
   }, [isPastDay])
 
-  return { blocks, tasksDone, isLoaded, addBlock, updateBlock, deleteBlock, toggleBlock }
+  /** Push cloud data directly into state (used after a cloud sync). */
+  const syncFromCloud = useCallback((data: DayData) => {
+    setBlocks(data.blocks)
+    setTasksDone(data.tasksDone)
+  }, [])
+
+  return { blocks, tasksDone, isLoaded, addBlock, updateBlock, deleteBlock, toggleBlock, syncFromCloud }
 }
